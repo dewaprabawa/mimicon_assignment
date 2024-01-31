@@ -12,7 +12,8 @@ class CameraViewCaptureScreen extends StatefulWidget {
   const CameraViewCaptureScreen({super.key, required this.cameras});
 
   @override
-  State<CameraViewCaptureScreen> createState() => _CameraViewCaptureScreenState();
+  State<CameraViewCaptureScreen> createState() =>
+      _CameraViewCaptureScreenState();
 }
 
 class _CameraViewCaptureScreenState extends State<CameraViewCaptureScreen> {
@@ -22,26 +23,7 @@ class _CameraViewCaptureScreenState extends State<CameraViewCaptureScreen> {
   @override
   void initState() {
     super.initState();
-    final currentCamera = widget.cameras.firstWhere(
-        (camera) => camera.lensDirection == CameraLensDirection.back);
-    controller = CameraController(currentCamera, ResolutionPreset.max);
-    controller.initialize().then((_) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {});
-    }).catchError((Object e) {
-      if (e is CameraException) {
-        switch (e.code) {
-          case 'CameraAccessDenied':
-            // Handle access errors here.
-            break;
-          default:
-            // Handle other errors here.
-            break;
-        }
-      }
-    });
+    initializeCamera();
   }
 
   @override
@@ -50,68 +32,95 @@ class _CameraViewCaptureScreenState extends State<CameraViewCaptureScreen> {
     super.dispose();
   }
 
+  void initializeCamera() async {
+    try {
+      final currentCamera = widget.cameras.firstWhere(
+        (camera) => camera.lensDirection == CameraLensDirection.back,
+      );
+      controller = CameraController(currentCamera, ResolutionPreset.max);
+      await controller.initialize();
+
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      handleCameraError(e);
+    }
+  }
+
+  void handleCameraError(Object e) {
+    if (e is CameraException) {
+      switch (e.code) {
+        case 'CameraAccessDenied':
+          // Handle access errors here.
+          break;
+        default:
+          // Handle other errors here.
+          break;
+      }
+    }
+  }
+
+  void navigateToEditor(File capturedImage) {
+    Navigator.push(
+      context,
+      CupertinoPageRoute(
+        builder: (context) => CameraViewEditor(capturedImage: capturedImage),
+      ),
+    );
+  }
+
   void _captureImage() async {
     try {
       final XFile file = await controller.takePicture();
-      // Handle the captured image file
-      print('Image captured: ${file.path}');
-      Navigator.push(
-          context,
-          CupertinoPageRoute(
-              builder: (context) =>
-                  CameraViewEditor(capturedImage: File(file.path))));
+      debugPrint('Image captured: ${file.path}');
+      navigateToEditor(File(file.path));
     } catch (e) {
-      print('Error capturing image: $e');
+      debugPrint('Error capturing image: $e');
+    }
+  }
+
+  Future<void> _imageGallery() async {
+    try {
+      XFile? file = await ImagePicker().pickMedia();
+      if (file == null) return;
+      navigateToEditor(File(file.path));
+    } catch (e) {
+      debugPrint('Error pick image from gallery: $e');
     }
   }
 
   void _changeCamera() async {
     if (controller.value.isInitialized) {
       try {
-        // Toggle between front and back cameras
         CameraLensDirection newDirection = isFrontCamera
             ? CameraLensDirection.back
             : CameraLensDirection.front;
         var newCamera = widget.cameras
             .firstWhere((camera) => camera.lensDirection == newDirection);
 
-        // Dispose of the current controller before initializing a new one
         await controller.dispose();
 
-        // Initialize the new controller with the new camera
         controller = CameraController(newCamera, ResolutionPreset.max);
         await controller.initialize();
 
         setState(() {
-          isFrontCamera = !isFrontCamera; // Update the current camera direction
+          isFrontCamera = !isFrontCamera; 
         });
       } catch (e) {
-        print('Error changing camera: $e');
+        debugPrint('Error changing camera: $e');
       }
-    }
-  }
-
-  Future<void> _imageGallery() async {
-    try {
-      XFile? xfile = await ImagePicker().pickMedia();
-      if (xfile == null) return;
-
-      Navigator.push(
-          context,
-          CupertinoPageRoute(
-              builder: (context) =>
-                  CameraViewEditor(capturedImage: File(xfile.path))));
-    } catch (e) {
-      debugPrint(e.toString() + "::image load from gallery");
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final height = MediaQuery.of(context).size.height;
     if (!controller.value.isInitialized) {
       return Container();
     }
+
+    final height = MediaQuery.of(context).size.height;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.black,

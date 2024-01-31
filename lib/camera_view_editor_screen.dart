@@ -1,12 +1,12 @@
 import 'dart:io';
 import 'dart:ui' as ui;
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:mimicon_assignment/face_painter.dart';
 
 class CameraViewEditor extends StatefulWidget {
   final File capturedImage;
@@ -18,18 +18,11 @@ class CameraViewEditor extends StatefulWidget {
 }
 
 class _CameraViewEditorState extends State<CameraViewEditor> {
-  @override
-  void initState() {
-    super.initState();
-    prepareImage();
-  }
 
-  //Create an instance of ScreenshotController
-  GlobalKey _globalKey = GlobalKey();
-
+  GlobalKey globalKey = GlobalKey();
   ui.Image? imageCanvas;
   bool isFaceDetected = false;
-
+  
   List<Offset> leftEyePoints = [];
   List<Offset> rightEyePoints = [];
   List<Offset> mouthPoints = [];
@@ -42,47 +35,54 @@ class _CameraViewEditorState extends State<CameraViewEditor> {
     ),
   );
 
-  Future<void> prepareImage() async {
+  @override
+  void initState() {
+    super.initState();
+    startPreparingImage();
+  }
+
+  Future<void> startPreparingImage() async {
     try {
-      print("widget.capturedImage ${widget.capturedImage.path}");
-      // Read the image file using File class
       File imageFile = File(widget.capturedImage.path);
       Uint8List bytes = await imageFile.readAsBytes();
       ui.Codec codec = await ui.instantiateImageCodec(
         bytes,
       );
-      imageCanvas = (await codec.getNextFrame()).image!;
+      imageCanvas = (await codec.getNextFrame()).image;
       isFaceDetected = false;
-      print("imageCanvas ${imageCanvas}");
-      print("widget.capturedImage ${widget.capturedImage}");
     } catch (e) {
-      print(e);
+      debugPrint(e.toString());
     }
   }
 
-  Future<void> detectEyes() async {
+   Future<void> detectEyes() async {
     try {
       setState(() {
         leftEyePoints.clear();
         rightEyePoints.clear();
       });
-      faces = await faceDetector
-          .processImage(InputImage.fromFile(widget.capturedImage!));
+
+      faces = await faceDetector.processImage(InputImage.fromFile(widget.capturedImage));
 
       if (faces.length > 1) {
         setState(() {
           isFaceDetected = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('다시찍기'),
-        ));
+
+        if(!mounted)return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('다시찍기'),
+          ),
+        );
+
         Navigator.popUntil(context, (route) => route.isFirst);
         return;
       }
 
       for (Face face in faces) {
-        for (MapEntry<FaceLandmarkType, FaceLandmark?> entry
-            in face.landmarks.entries) {
+        for (MapEntry<FaceLandmarkType, FaceLandmark?> entry in face.landmarks.entries) {
           if (entry.value != null) {
             if (entry.key == FaceLandmarkType.leftEye) {
               leftEyePoints.add(Offset(
@@ -103,27 +103,31 @@ class _CameraViewEditorState extends State<CameraViewEditor> {
         isFaceDetected = true;
       });
     } catch (e) {
-      print(e);
+      debugPrint(e.toString());
     }
   }
-
   Future<void> detectMouth() async {
     try {
+
       setState(() {
         isFaceDetected = false;
         mouthPoints.clear();
       });
+
       faces = await faceDetector
-          .processImage(InputImage.fromFile(widget.capturedImage!));
+          .processImage(InputImage.fromFile(widget.capturedImage));
 
       if (faces.length > 1) {
-        setState(() {
-          ScaffoldMessenger.of(context).showSnackBar(
+        
+        if(!mounted)return;
+        
+        ScaffoldMessenger.of(context).showSnackBar(
           const  SnackBar(
               content: Text('다시찍기'),
             ),
+        
           );
-        });
+        
         Navigator.popUntil(context, (route) => route.isFirst);
         return;
       }
@@ -147,17 +151,20 @@ class _CameraViewEditorState extends State<CameraViewEditor> {
           }
         }
       }
+
       setState(() {
         isFaceDetected = true;
       });
+
     } catch (e) {
-      print(e);
+      debugPrint(e.toString());
     }
   }
 
   Future<void> saveImage() async {
+    
     try {
-      RenderRepaintBoundary boundary = _globalKey.currentContext!
+      RenderRepaintBoundary boundary = globalKey.currentContext!
           .findRenderObject() as RenderRepaintBoundary;
       ui.Image image = await boundary.toImage();
       ByteData? byteData =
@@ -167,14 +174,18 @@ class _CameraViewEditorState extends State<CameraViewEditor> {
             await ImageGallerySaver.saveImage(byteData.buffer.asUint8List());
         print(result);
       }
+      
+      if(!mounted)return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Screenshot captured successfully!'),
         ),
       );
+
     } catch (e) {
-      print(e);
+
+      debugPrint(e.toString());
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Failed to capture screenshot.'),
@@ -279,7 +290,7 @@ class _CameraViewEditorState extends State<CameraViewEditor> {
 
   Widget _buildImageAfterDetected(double height) {
     return RepaintBoundary(
-      key: _globalKey,
+      key: globalKey,
       child: SizedBox(
         width: double.infinity,
         height: height * 0.6,
@@ -311,49 +322,3 @@ class _CameraViewEditorState extends State<CameraViewEditor> {
   }
 }
 
-class FacePainter extends CustomPainter {
-  ui.Image image;
-  List<Offset> leftEyePoints = [];
-  List<Offset> rightEyePoints = [];
-  List<Offset> mouthPoints = [];
-
-  FacePainter({
-    required this.image,
-    required this.leftEyePoints,
-    required this.rightEyePoints,
-    required this.mouthPoints,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (image != null) {
-      canvas.drawImage(image, Offset.zero, Paint());
-    }
-
-    for (Offset point in leftEyePoints) {
-      _drawOval(canvas, point, point.dx * 0.3, point.dy * 0.2,
-          Paint()..color = Color(0xff01FF0B).withOpacity(0.5));
-    }
-
-    for (Offset point in rightEyePoints) {
-      _drawOval(canvas, point, point.dx * 0.3, point.dy * 0.2,
-          Paint()..color = Color(0xff01FF0B).withOpacity(0.5));
-    }
-
-    for (Offset point in mouthPoints) {
-      _drawOval(canvas, point, point.dx * 0.40, point.dy * 0.12,
-          Paint()..color = Color(0xff01FF0B).withOpacity(0.5));
-    }
-  }
-
-  void _drawOval(
-      Canvas canvas, Offset center, double width, double height, Paint paint) {
-    Rect oval = Rect.fromCenter(center: center, width: width, height: height);
-    canvas.drawOval(oval, paint);
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) {
-    return true;
-  }
-}
