@@ -7,6 +7,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:mimicon_assignment/face_painter.dart';
+import 'package:oktoast/oktoast.dart';
 
 class CameraViewEditor extends StatefulWidget {
   final File capturedImage;
@@ -21,6 +22,7 @@ class _CameraViewEditorState extends State<CameraViewEditor> {
   GlobalKey globalKey = GlobalKey();
   ui.Image? imageCanvas;
   bool isFaceDetected = false;
+  bool hasDownloaded = false;
 
   List<Offset> leftEyePoints = [];
   List<Offset> rightEyePoints = [];
@@ -71,11 +73,12 @@ class _CameraViewEditorState extends State<CameraViewEditor> {
 
         if (!mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('다시찍기'),
-          ),
+        showToast(
+        "다시찍기", position: ToastPosition.top,
+        context: context
         );
+
+        await Future.delayed(Duration(milliseconds: 900));
 
         Navigator.popUntil(context, (route) => route.isFirst);
         return;
@@ -121,11 +124,12 @@ class _CameraViewEditorState extends State<CameraViewEditor> {
       if (faces.length > 1) {
         if (!mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('다시찍기'),
-          ),
+        showToast(
+        "다시찍기", position: ToastPosition.top,
+        context: context
         );
+
+        await Future.delayed(Duration(milliseconds: 900));
 
         Navigator.popUntil(context, (route) => route.isFirst);
         return;
@@ -172,13 +176,15 @@ class _CameraViewEditorState extends State<CameraViewEditor> {
         debugPrint(result.toString());
       }
 
+      setState(() {
+        hasDownloaded = true;
+      });
+
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Image downloaded successfully!'),
-        ),
-      );
+      showToast(
+        "2개 이상의 얼굴이 감지되었어요!", position: ToastPosition.top);
+
     } catch (e) {
       debugPrint(e.toString());
       ScaffoldMessenger.of(context).showSnackBar(
@@ -239,41 +245,43 @@ class _CameraViewEditorState extends State<CameraViewEditor> {
             const SizedBox(
               height: 20,
             ),
-            Padding(
-              padding: const EdgeInsets.only(left: 20),
-              child: Row(
-                children: [
-                  InkWell(
-                    onTap: () async {
-                      await detectEyes();
-                    },
-                    child: SvgPicture.asset("assets/eye_button.svg"),
-                  ),
-                  const SizedBox(width: 20),
-                  InkWell(
-                    onTap: () async {
-                      await detectMouth();
-                    },
-                    child: SvgPicture.asset("assets/mouth_button.svg"),
-                  ),
-                ],
+            if (!hasDownloaded)
+              Padding(
+                padding: const EdgeInsets.only(left: 20),
+                child: Row(
+                  children: [
+                    InkWell(
+                      onTap: () async {
+                        await detectEyes();
+                      },
+                      child: SvgPicture.asset("assets/eye_button.svg"),
+                    ),
+                    const SizedBox(width: 20),
+                    InkWell(
+                      onTap: () async {
+                        await detectMouth();
+                      },
+                      child: SvgPicture.asset("assets/mouth_button.svg"),
+                    ),
+                  ],
+                ),
               ),
-            ),
             const Spacer(),
-            Center(
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                    fixedSize: Size(width - 10, 55),
-                    backgroundColor: isNotlayeredGreen
-                        ? Colors.grey
-                        : const Color(0xff7B8FF7)),
-                child: SvgPicture.asset("assets/저장하기download_text.svg"),
-                onPressed: () async {
-                  if (isNotlayeredGreen) return;
-                  await saveImage();
-                },
+            if (!hasDownloaded)
+              Center(
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      fixedSize: Size(width - 10, 55),
+                      backgroundColor: isNotlayeredGreen
+                          ? Colors.grey
+                          : const Color(0xff7B8FF7)),
+                  child: SvgPicture.asset("assets/저장하기download_text.svg"),
+                  onPressed: () async {
+                    if (isNotlayeredGreen) return;
+                    await saveImage();
+                  },
+                ),
               ),
-            ),
             const SizedBox(
               height: 20,
             ),

@@ -41,6 +41,7 @@ dependencies:
   camera: ^0.10.5+9
   flutter_svg: ^2.0.9
   image_gallery_saver: ^2.0.3
+  oktoast: ^3.4.0
 
 
 dev_dependencies:

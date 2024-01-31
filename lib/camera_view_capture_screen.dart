@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mimicon_assignment/camera_view_editor_screen.dart';
+import 'package:oktoast/oktoast.dart';
 
 class CameraViewCaptureScreen extends StatefulWidget {
   final List<CameraDescription> cameras;
@@ -65,7 +66,7 @@ class _CameraViewCaptureScreenState extends State<CameraViewCaptureScreen> {
     Navigator.push(
       context,
       CupertinoPageRoute(
-        builder: (context) => CameraViewEditor(capturedImage: capturedImage),
+        builder: (context) => OKToast(child: CameraViewEditor(capturedImage: capturedImage)),
       ),
     );
   }

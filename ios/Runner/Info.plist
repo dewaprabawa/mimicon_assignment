@@ -49,5 +49,7 @@
 	<string>Please allow the app to access the library.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Please allow the app to access the camera.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Please allow the app to access the microphone.</string>
 </dict>
 </plist>
