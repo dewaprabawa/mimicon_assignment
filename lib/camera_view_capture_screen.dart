@@ -105,7 +105,7 @@ class _CameraViewCaptureScreenState extends State<CameraViewCaptureScreen> {
         await controller.initialize();
 
         setState(() {
-          isFrontCamera = !isFrontCamera; 
+          isFrontCamera = !isFrontCamera;
         });
       } catch (e) {
         debugPrint('Error changing camera: $e');

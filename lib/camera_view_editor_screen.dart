@@ -18,11 +18,10 @@ class CameraViewEditor extends StatefulWidget {
 }
 
 class _CameraViewEditorState extends State<CameraViewEditor> {
-
   GlobalKey globalKey = GlobalKey();
   ui.Image? imageCanvas;
   bool isFaceDetected = false;
-  
+
   List<Offset> leftEyePoints = [];
   List<Offset> rightEyePoints = [];
   List<Offset> mouthPoints = [];
@@ -55,21 +54,22 @@ class _CameraViewEditorState extends State<CameraViewEditor> {
     }
   }
 
-   Future<void> detectEyes() async {
+  Future<void> detectEyes() async {
     try {
       setState(() {
         leftEyePoints.clear();
         rightEyePoints.clear();
       });
 
-      faces = await faceDetector.processImage(InputImage.fromFile(widget.capturedImage));
+      faces = await faceDetector
+          .processImage(InputImage.fromFile(widget.capturedImage));
 
       if (faces.length > 1) {
         setState(() {
           isFaceDetected = false;
         });
 
-        if(!mounted)return;
+        if (!mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -82,7 +82,8 @@ class _CameraViewEditorState extends State<CameraViewEditor> {
       }
 
       for (Face face in faces) {
-        for (MapEntry<FaceLandmarkType, FaceLandmark?> entry in face.landmarks.entries) {
+        for (MapEntry<FaceLandmarkType, FaceLandmark?> entry
+            in face.landmarks.entries) {
           if (entry.value != null) {
             if (entry.key == FaceLandmarkType.leftEye) {
               leftEyePoints.add(Offset(
@@ -106,9 +107,9 @@ class _CameraViewEditorState extends State<CameraViewEditor> {
       debugPrint(e.toString());
     }
   }
+
   Future<void> detectMouth() async {
     try {
-
       setState(() {
         isFaceDetected = false;
         mouthPoints.clear();
@@ -118,16 +119,14 @@ class _CameraViewEditorState extends State<CameraViewEditor> {
           .processImage(InputImage.fromFile(widget.capturedImage));
 
       if (faces.length > 1) {
-        
-        if(!mounted)return;
-        
+        if (!mounted) return;
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const  SnackBar(
-              content: Text('다시찍기'),
-            ),
-        
-          );
-        
+          const SnackBar(
+            content: Text('다시찍기'),
+          ),
+        );
+
         Navigator.popUntil(context, (route) => route.isFirst);
         return;
       }
@@ -155,40 +154,36 @@ class _CameraViewEditorState extends State<CameraViewEditor> {
       setState(() {
         isFaceDetected = true;
       });
-
     } catch (e) {
       debugPrint(e.toString());
     }
   }
 
   Future<void> saveImage() async {
-    
     try {
-      RenderRepaintBoundary boundary = globalKey.currentContext!
-          .findRenderObject() as RenderRepaintBoundary;
+      RenderRepaintBoundary boundary =
+          globalKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
       ui.Image image = await boundary.toImage();
       ByteData? byteData =
           await (image.toByteData(format: ui.ImageByteFormat.png));
       if (byteData != null) {
         final result =
             await ImageGallerySaver.saveImage(byteData.buffer.asUint8List());
-        print(result);
+        debugPrint(result.toString());
       }
-      
-      if(!mounted)return;
+
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Screenshot captured successfully!'),
+          content: Text('Image downloaded successfully!'),
         ),
       );
-
     } catch (e) {
-
       debugPrint(e.toString());
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Failed to capture screenshot.'),
+          content: Text('Failed to download image.'),
         ),
       );
     }
@@ -321,4 +316,3 @@ class _CameraViewEditorState extends State<CameraViewEditor> {
     );
   }
 }
-
